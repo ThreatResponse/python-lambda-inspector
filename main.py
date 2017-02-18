@@ -59,6 +59,9 @@ def get_cpuinfo():
 def get_packages():
     return [x[1] for x in pkgutil.iter_modules()]
 
+def get_processes():
+    return call_shell_wrapper(["ps" "aux"])
+
     
 ## main map
 
@@ -73,7 +76,8 @@ lookups = {
     "warm_for":   is_warm.warm_for,
     "dmesg":      get_dmesg,
     "cpuinfo":    get_cpuinfo,
-    "packages":   get_packages
+    "packages":   get_packages,
+    "ps":         get_processes
 }
 
 def make_result_dict(d):
