@@ -1,5 +1,6 @@
 import subprocess
 import os
+import is_warm
 
 ## General concept for now:
 ##
@@ -45,13 +46,20 @@ def get_uname():
 def get_env():
     return os.environ.__dict__.get('data')
 
+def get_df():
+    return call_shell_wrapper(["df", "-h"])
+    
 ## main map
 
 lookups = {
     "/etc/issue": get_etc_issue,
     "pwd":        get_pwd,
     "uname":      get_uname,
-    "env":        get_env
+    "env":        get_env,
+    "df":         get_df,
+    "is_warm":    is_warm.is_warm,
+    "warm_since": is_warm.warm_since,
+    "warm_for":   is_warm.warm_for
 }
 
 def make_result_dict(d):
@@ -61,8 +69,18 @@ def make_result_dict(d):
     """
     return {k: v() for (k,v) in d.iteritems()}
 
+def jsonify_results(d):
+    d['warm_since'] = str(d['warm_since'])
+    d['warm_for'] = str(d['warm_for'])
+
+    return d
+
 def lambda_handler(event, context):
-    return make_result_dict(lookups)
+    res = make_result_dict(lookups)
+
+    is_warm.mark_warm()
+    
+    return jsonify_results(res)
 
 def wrapper():
     """Helper for easily calling this from a command line locally
