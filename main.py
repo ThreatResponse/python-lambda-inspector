@@ -1,6 +1,7 @@
 import subprocess
 import os
 import is_warm
+import pkgutil
 
 ## General concept for now:
 ##
@@ -48,6 +49,16 @@ def get_env():
 
 def get_df():
     return call_shell_wrapper(["df", "-h"])
+
+def get_dmesg():
+    return call_shell_wrapper(["dmesg"])
+
+def get_cpuinfo():
+    return contents_of_file("/proc/cpuinfo")
+
+def get_packages():
+    return [x[1] for x in pkgutil.iter_modules()]
+
     
 ## main map
 
@@ -59,7 +70,10 @@ lookups = {
     "df":         get_df,
     "is_warm":    is_warm.is_warm,
     "warm_since": is_warm.warm_since,
-    "warm_for":   is_warm.warm_for
+    "warm_for":   is_warm.warm_for,
+    "dmesg":      get_dmesg,
+    "cpuinfo":    get_cpuinfo,
+    "packages":   get_packages
 }
 
 def make_result_dict(d):
