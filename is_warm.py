@@ -1,6 +1,5 @@
 import os
 from datetime import datetime,timedelta
-import sys
 
 warm_file = "/tmp/lambda-is-warm"
 
