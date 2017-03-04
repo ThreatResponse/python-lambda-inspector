@@ -112,6 +112,7 @@ def sanitize_env(d):
 def jsonify_results(d):
     d['warm_since'] = str(d['warm_since'])
     d['warm_for'] = str(d['warm_for'])
+    d['runtime'] = 'python'
 
     return d
 
