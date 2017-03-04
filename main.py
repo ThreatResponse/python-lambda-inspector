@@ -2,6 +2,7 @@ import subprocess
 import os
 import is_warm
 import pkgutil
+import json
 
 ## General concept for now:
 ##
@@ -88,10 +89,12 @@ def make_result_dict(d):
     return {k: v() for (k,v) in d.iteritems()}
 
 def jsonify_results(d):
-    d['warm_since'] = str(d['warm_since'])
-    d['warm_for'] = str(d['warm_for'])
+    if 'warm_since' in d:
+        d['warm_since'] = str(d['warm_since'])
+    if 'warm_for' in d:
+        d['warm_for'] = str(d['warm_for'])
 
-    return d
+    return json.dumps(d)
 
 def lambda_handler(event, context):
     res = make_result_dict(lookups)
