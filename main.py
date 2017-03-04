@@ -63,6 +63,8 @@ def get_packages():
 def get_processes():
     return call_shell_wrapper(["ps", "aux"])
 
+def truncate(string, start=0, end=0):
+    return string[start:end]
     
 ## main map
 
@@ -81,12 +83,31 @@ lookups = {
     "ps":         get_processes
 }
 
+sanitize_envvars = {
+    "AWS_SESSION_TOKEN": {"func": truncate, "args": [], "kwargs": {'end': 12}},
+    "AWS_SECURITY_TOKEN": {"func": truncate, "args": [], "kwargs": {'end': 12}},
+    "AWS_ACCESS_KEY_ID": {"func": truncate, "args": [], "kwargs": {'end': 12}},
+    "AWS_SECRET_ACCESS_KEY": {"func": truncate, "args": [], "kwargs": {'end': 12}}
+}
+
 def make_result_dict(d):
     """Given the lookups dict (strings to fns),
     will return the dictionary with fns replaced by the results of
     calling them.
     """
     return {k: v() for (k,v) in d.iteritems()}
+
+def sanitize_env(d):
+    for var, action in sanitize_envvars.iteritems():
+        try:
+            sanitize_func = action['func']
+            args = [d['env'][var]] + action['args']
+            kwargs = action['kwargs']
+            d['env'][var] = sanitize_func(*args, **kwargs)
+        except KeyError:
+            pass
+
+    return d
 
 def jsonify_results(d):
     if 'warm_since' in d:
@@ -101,7 +122,7 @@ def lambda_handler(event, context):
 
     is_warm.mark_warm()
     
-    return jsonify_results(res)
+    return jsonify_results(sanitize_env(res))
 
 def wrapper():
     """Helper for easily calling this from a command line locally
