@@ -60,7 +60,7 @@ def get_packages():
     return [x[1] for x in pkgutil.iter_modules()]
 
 def get_processes():
-    return call_shell_wrapper(["ps" "aux"])
+    return call_shell_wrapper(["ps", "aux"])
 
     
 ## main map
