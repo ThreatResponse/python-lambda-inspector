@@ -2,6 +2,7 @@ import subprocess
 import os
 import is_warm
 import pkgutil
+import json
 
 ## General concept for now:
 ##
@@ -126,5 +127,5 @@ def wrapper():
     like `python -c 'import main; main.wrapper()'`
     """
     res = lambda_handler(None, None)
-    print res
+    print json.dumps(res)
     return res
