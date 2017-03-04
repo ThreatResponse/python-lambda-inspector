@@ -94,7 +94,7 @@ def jsonify_results(d):
     if 'warm_for' in d:
         d['warm_for'] = str(d['warm_for'])
 
-    return json.dumps(d)
+    return d
 
 def lambda_handler(event, context):
     res = make_result_dict(lookups)
@@ -108,5 +108,5 @@ def wrapper():
     like `python -c 'import main; main.wrapper()'`
     """
     res = lambda_handler(None, None)
-    print res
+    print json.dumps(res)
     return res
