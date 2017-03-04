@@ -4,10 +4,18 @@ from datetime import datetime,timedelta
 warm_file = "/tmp/lambda-is-warm"
 
 def is_warm():
-    """Returns true/false whether the lambda function is warm,
-    as determined by whether or not warm_file exists.
+    """Returns warm/not warm/not possible
+       to denote if the aws lambda function is warm,
+       as determined by whether or not warm_file exists (warm/not warm)
+       or if the filesystem is readonly (not possible)
     """
-    return os.path.isfile(warm_file)
+    if os.access(os.path.dirname(warm_file),os.W_OK):
+        if os.path.isfile(warm_file):
+            return 'warm'
+        else:
+            return 'not warm'
+    else:
+        return 'not possible'
 
 def touch(fname, times=None):
     with open(fname, 'a'):
@@ -16,20 +24,23 @@ def touch(fname, times=None):
 def mark_warm():
     """Mark the lambda function as warm.
     """
-    if not is_warm():
-        with open(warm_file, 'a'):
-            os.utime(warm_file, None)
+    if is_warm() == 'not warm':
+        try:
+            with open(warm_file, 'a'):
+                os.utime(warm_file, None)
+        except IOError as e:
+            pass
 
 def warm_since():
     """Return the date when the current warm version of the fn started.
     """
-    if is_warm():
+    if is_warm() == 'warm':
         ts = os.path.getmtime(warm_file)
         return datetime.fromtimestamp(ts)
 
 def warm_for():
     """Return the elapsed time that the fn has been warm for."""
-    if is_warm():
+    if is_warm() == 'warm':
         ts = os.path.getmtime(warm_file)
         warm_start = datetime.fromtimestamp(ts)
         now = datetime.now()

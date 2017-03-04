@@ -110,9 +110,10 @@ def sanitize_env(d):
     return d
 
 def jsonify_results(d):
-    d['warm_since'] = str(d['warm_since'])
-    d['warm_for'] = str(d['warm_for'])
-    d['runtime'] = 'python'
+    if 'warm_since' in d:
+        d['warm_since'] = str(d['warm_since'])
+    if 'warm_for' in d:
+        d['warm_for'] = str(d['warm_for'])
 
     return d
 
