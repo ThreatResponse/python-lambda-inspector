@@ -3,6 +3,7 @@ import os
 import is_warm
 import pkgutil
 import json
+from datetime import datetime
 
 ## General concept for now:
 ##
@@ -65,6 +66,9 @@ def get_processes():
 
 def truncate(string, start=0, end=0):
     return string[start:end]
+
+def get_timestamp():
+    return datetime.utcnow().isoformat()
     
 ## main map
 
@@ -80,7 +84,8 @@ lookups = {
     "dmesg":      get_dmesg,
     "cpuinfo":    get_cpuinfo,
     "packages":   get_packages,
-    "ps":         get_processes
+    "ps":         get_processes,
+    "timestamp":  get_timestamp
 }
 
 sanitize_envvars = {
