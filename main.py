@@ -4,6 +4,7 @@ import is_warm
 import pkgutil
 import json
 from datetime import datetime
+import calendar
 
 ## General concept for now:
 ##
@@ -68,7 +69,7 @@ def truncate(string, start=0, end=0):
     return string[start:end]
 
 def get_timestamp():
-    return datetime.utcnow().isoformat()
+    return calendar.timegm(datetime.utcnow().utctimetuple())
     
 ## main map
 
