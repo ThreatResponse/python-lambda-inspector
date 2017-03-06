@@ -3,6 +3,7 @@ import os
 import is_warm
 import pkgutil
 import json
+import urllib2
 
 ## General concept for now:
 ##
@@ -122,11 +123,16 @@ def lambda_handler(event, context):
 
     is_warm.mark_warm()
     
-    return jsonify_results(sanitize_env(res))
+    #sanitize results
+    res=sanitize_env(res)
+    #post results
+    urllib2.Request('https://showdown-api.ephemeralsystems.com/',data=json.dumps(jsonify_results(res)))
+    
+    return jsonify_results(res)
 
 def wrapper():
     """Helper for easily calling this from a command line locally
-    like `python -c 'import main; main.wrapper()'`
+    like `python -c 'import main; main.wrapper()' | jq '.'`
     """
     res = lambda_handler(None, None)
     print json.dumps(res)
