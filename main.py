@@ -19,6 +19,8 @@ from datetime import datetime
 ## 'wrapper' is a function that takes no args and calls
 ## the regular lambda start point for running the code locally.
 
+## Now with CI goodness in us-west-2
+
 ## helpers
 
 def call_shell_wrapper(args):
