@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: Python profiler for the release version of the ThreatResponse Serverless Showdown.
+Resources:
+  pythonlambdainspectorrelease:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: main.lambda_handler
+      Runtime: python2.7
+      CodeUri: .
+      Description: 'Release version of the python inspector.  CI from the Master Branch.'
+      MemorySize: 128
+      Timeout: 3
+      Role: 'arn:aws:iam::576309420438:role/lambda_basic_execution'
+
