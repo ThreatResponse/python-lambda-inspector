@@ -4,6 +4,7 @@ import is_warm
 import pkgutil
 import json
 import calendar
+import urllib
 import urllib2
 
 
@@ -77,7 +78,7 @@ def truncate(string, start=0, end=0):
 
 def get_timestamp():
     return calendar.timegm(datetime.utcnow().utctimetuple())
-    
+
 ## main map
 
 lookups = {
@@ -130,16 +131,41 @@ def jsonify_results(d):
 
     return d
 
+def store_results(res):
+    """
+        Store results either in urllib2 or directly in s3 if lambda.
+        HTTP request will be a POST instead of a GET when the data
+        parameter is provided.
+    """
+    print res
+    data =  json.dumps(res)
+
+    headers = {'Content-Type': 'application/json'}
+
+    req = urllib2.Request(
+        'https://showdown-api.ephemeralsystems.com/',
+        data=data,
+        headers=headers
+    )
+
+    response = urllib2.urlopen(req)
+
+    return response.read()
+
 def lambda_handler(event, context):
     res = make_result_dict(lookups)
 
     is_warm.mark_warm()
-    
+
     #sanitize results
     res=sanitize_env(res)
+
+    #send results to API
+    api_call = store_results(res)
+    print api_call
     #post results
-    urllib2.Request('https://showdown-api.ephemeralsystems.com/',data=json.dumps(jsonify_results(res)))
-    
+    #print(res)
+
     return jsonify_results(res)
 
 def wrapper():
@@ -147,5 +173,5 @@ def wrapper():
     like `python -c 'import main; main.wrapper()' | jq '.'`
     """
     res = lambda_handler(None, None)
-    print json.dumps(res)
+    #print json.dumps(res)
     return res

@@ -36,7 +36,7 @@ def warm_since():
     """
     if is_warm() == 'warm':
         ts = os.path.getmtime(warm_file)
-        return datetime.fromtimestamp(ts)
+        return ts
 
 def warm_for():
     """Return the elapsed time that the fn has been warm for."""
@@ -44,7 +44,6 @@ def warm_for():
         ts = os.path.getmtime(warm_file)
         warm_start = datetime.fromtimestamp(ts)
         now = datetime.now()
-        return now - warm_start
+        return (now - warm_start).total_seconds()
     else:
         return timedelta(0)
-    
