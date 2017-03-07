@@ -2,9 +2,9 @@ version: 0.1
 phases:
   install:
     commands:
-      - aws cloudformation package --template-file python-profiler.yaml --s3-bucket threatresponse.python-lambda-profiler 
-                                   --output-template-file python-profiler-release.yaml
+      - aws cloudformation package --template-file python-profiler.yml --s3-bucket threatresponse.python-lambda-profiler 
+                                   --output-template-file python-profiler-release.yml
 artifacts:
   type: zip
   files:
-    - python-profiler-release.yaml
+    - python-profiler-release.yml
