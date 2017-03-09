@@ -6,6 +6,8 @@ import json
 import calendar
 import urllib
 import urllib2
+import uuid
+import boto3
 
 
 from datetime import datetime
@@ -131,14 +133,14 @@ def jsonify_results(d):
 
     return d
 
-def store_results(res):
+def store_results_api(res):
     """
         Store results either in urllib2 or directly in s3 if lambda.
         HTTP request will be a POST instead of a GET when the data
         parameter is provided.
     """
     print res
-    data =  json.dumps(res)
+    data = json.dumps(res)
 
     headers = {'Content-Type': 'application/json'}
 
@@ -151,6 +153,32 @@ def store_results(res):
     response = urllib2.urlopen(req)
 
     return response.read()
+
+def store_results_s3(res):
+    """
+    Store results in s3.
+    Assumes that we're in a lambda function (or something else with
+    similar permissions).
+    """
+
+    s3 = boto3.resource('s3')
+    s3_name = uuid.uuid4().hex
+    data = json.dumps(res)
+
+    response = s3.Bucket('threatresponse.python-lambda-profiler').put_object(Key=s3_name, Body=data)
+
+    return response
+
+def store_results(res):
+    """
+    Attempts to store results via POST, falls back to writing directly to S3.
+    """
+
+    try:
+        response = store_results_api(res)
+    except urllib2.HTTPError:
+        response = store_results_s3(res)
+
 
 def lambda_handler(event, context):
     res = make_result_dict(lookups)

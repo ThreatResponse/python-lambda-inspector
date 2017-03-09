@@ -46,4 +46,4 @@ def warm_for():
         now = datetime.now()
         return (now - warm_start).total_seconds()
     else:
-        return timedelta(0)
+        return 0
