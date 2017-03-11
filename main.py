@@ -1,88 +1,99 @@
-import subprocess
 import os
 import is_warm
 import pkgutil
 import json
 import calendar
-import urllib
 import urllib2
 import uuid
 import boto3
-
+import gzip
+import StringIO
 
 from datetime import datetime
 
 
+"""
+python-lambda-inspector
+General concept for now:
+    'lookups' is a dict that contains names of info
+    and maps them to the functions to determine that info.
+    'wrapper' is a function that takes no args and calls
+    the regular lambda start point for running the code locally.
+    Now with CI goodness in us-west-2.
+"""
 
-## General concept for now:
-##
-## 'lookups' is a dict that contains names of info
-## and maps them to the functions to determine that info.
-##
-## 'wrapper' is a function that takes no args and calls
-## the regular lambda start point for running the code locally.
-
-## Now with CI goodness in us-west-2
-
-## helpers
 
 def call_shell_wrapper(args):
-    """Intended to make it easy to add additional metrics from shell calls,
+    """
+    Intended to make it easy to add additional metrics from shell calls,
     such as capturing return values, etc.
     Currently no additional value.
     Subprocess module is recommended but didn't work for some uname calls.
     """
     return os.popen(" ".join(args)).read()
-    # return subprocess.check_output(args)
 
 
 def contents_of_file(fname):
-    """Returns contents of file in a single string,
-    or None if there is an IOError (eg. file not found).
+    """Return contents of file in a single string.
+
+    Return None if there is an IOError (eg. file not found).
     """
+
     try:
         with file(fname) as f:
             return f.read()
     except IOError:
         return None
 
-## fns for specific pieces of data
+
+"""Functions for specific data retreival."""
+
 
 def get_etc_issue():
     return contents_of_file("/etc/issue")
 
+
 def get_pwd():
     return call_shell_wrapper(["pwd"])
+
 
 def get_uname():
     return call_shell_wrapper(["uname", "-a"])
 
+
 def get_env():
     return os.environ.__dict__.get('data')
+
 
 def get_df():
     return call_shell_wrapper(["df", "-h"])
 
+
 def get_dmesg():
     return call_shell_wrapper(["dmesg"])
+
 
 def get_cpuinfo():
     return contents_of_file("/proc/cpuinfo")
 
+
 def get_packages():
     return [x[1] for x in pkgutil.iter_modules()]
+
 
 def get_processes():
     return call_shell_wrapper(["ps", "aux"])
 
+
 def truncate(string, start=0, end=0):
     return string[start:end]
+
 
 def get_timestamp():
     return calendar.timegm(datetime.utcnow().utctimetuple())
 
-## main map
 
+"""Main map table of items to post or store."""
 lookups = {
     "/etc/issue": get_etc_issue,
     "pwd":        get_pwd,
@@ -99,19 +110,36 @@ lookups = {
     "timestamp":  get_timestamp
 }
 
+"""Remove any sensitive information about the account here."""
 sanitize_envvars = {
-    "AWS_SESSION_TOKEN": {"func": truncate, "args": [], "kwargs": {'end': 12}},
-    "AWS_SECURITY_TOKEN": {"func": truncate, "args": [], "kwargs": {'end': 12}},
-    "AWS_ACCESS_KEY_ID": {"func": truncate, "args": [], "kwargs": {'end': 12}},
-    "AWS_SECRET_ACCESS_KEY": {"func": truncate, "args": [], "kwargs": {'end': 12}}
+    "AWS_SESSION_TOKEN":
+        {
+            "func": truncate, "args": [], "kwargs": {'end': 12}
+        },
+    "AWS_SECURITY_TOKEN":
+        {
+            "func": truncate, "args": [], "kwargs": {'end': 12}
+        },
+    "AWS_ACCESS_KEY_ID":
+        {
+            "func": truncate, "args": [], "kwargs": {'end': 12}
+        },
+    "AWS_SECRET_ACCESS_KEY":
+        {
+            "func": truncate, "args": [], "kwargs": {'end': 12}
+        }
 }
 
+
 def make_result_dict(d):
-    """Given the lookups dict (strings to fns),
+    """Create dictionary of results.
+
+    Given the lookups dict (strings to fns),
     will return the dictionary with fns replaced by the results of
     calling them.
     """
-    return {k: v() for (k,v) in d.iteritems()}
+    return {k: v() for (k, v) in d.iteritems()}
+
 
 def sanitize_env(d):
     for var, action in sanitize_envvars.iteritems():
@@ -125,6 +153,7 @@ def sanitize_env(d):
 
     return d
 
+
 def jsonify_results(d):
     if 'warm_since' in d:
         d['warm_since'] = str(d['warm_since'])
@@ -133,13 +162,14 @@ def jsonify_results(d):
 
     return d
 
+
 def store_results_api(res):
+    """Store Results via the API Component.
+
+    Store results either in urllib2 or directly in s3 if lambda.
+    HTTP request will be a POST instead of a GET when the data
+    parameter is provided.
     """
-        Store results either in urllib2 or directly in s3 if lambda.
-        HTTP request will be a POST instead of a GET when the data
-        parameter is provided.
-    """
-    print res
     data = json.dumps(res)
 
     headers = {'Content-Type': 'application/json'}
@@ -149,35 +179,52 @@ def store_results_api(res):
         data=data,
         headers=headers
     )
+    try:
+        response = urllib2.urlopen(req)
+        return response.read()
+    except Exception as e:
+        raise e
 
-    response = urllib2.urlopen(req)
-
-    return response.read()
 
 def store_results_s3(res):
     """
     Store results in s3.
+
     Assumes that we're in a lambda function (or something else with
     similar permissions).
     """
+    s3 = boto3.client('s3')
+    s3_name = "{name}.json.gz".format(name=uuid.uuid4().hex)
+    s3_bucket = 'threatresponse.showdown'
 
-    s3 = boto3.resource('s3')
-    s3_name = uuid.uuid4().hex
-    data = json.dumps(res)
+    # Compress the payload for fluentd friendlieness.
+    data = compress_results(res)
 
-    response = s3.Bucket('threatresponse.python-lambda-profiler').put_object(Key=s3_name, Body=data)
-
+    # Store the result in S3 bucket same as the API.
+    response = s3.put_object(
+        Key=s3_name,
+        Body=data,
+        Bucket=s3_bucket
+    )
     return response
+
+
+def compress_results(res):
+    out = StringIO.StringIO()
+    file_content = json.dumps(res)
+    with gzip.GzipFile(fileobj=out, mode="w") as f:
+        f.write(file_content)
+    return out.getvalue()
+
 
 def store_results(res):
     """
     Attempts to store results via POST, falls back to writing directly to S3.
     """
-
     try:
-        response = store_results_api(res)
-    except urllib2.HTTPError:
-        response = store_results_s3(res)
+        store_results_api(res)
+    except Exception as e:
+        store_results_s3(res)
 
 
 def lambda_handler(event, context):
@@ -185,21 +232,20 @@ def lambda_handler(event, context):
 
     is_warm.mark_warm()
 
-    #sanitize results
-    res=sanitize_env(res)
+    # sanitize results
+    #res = sanitize_env(res)
 
-    #send results to API
-    api_call = store_results(res)
-    print api_call
-    #post results
-    #print(res)
+    # send results to API
+    store_results(res)
 
     return jsonify_results(res)
 
+
 def wrapper():
-    """Helper for easily calling this from a command line locally
-    like `python -c 'import main; main.wrapper()' | jq '.'`
+    """Helper for easily calling this from a command line locally.
+
+    Example: `python -c 'import main; main.wrapper()' | jq '.'`
     """
     res = lambda_handler(None, None)
-    #print json.dumps(res)
+    # print json.dumps(res)
     return res
