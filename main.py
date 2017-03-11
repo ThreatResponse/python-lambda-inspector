@@ -9,6 +9,7 @@ import boto3
 import gzip
 import StringIO
 import copy
+import platform
 
 from collections import OrderedDict
 from datetime import datetime
@@ -79,6 +80,8 @@ def get_pwd():
 def get_uname():
     return call_shell_wrapper(["uname", "-a"])
 
+def get_release_version():
+    return platform.release()
 
 def get_env():
     return copy.deepcopy(os.environ.__dict__.get('data'))
@@ -143,6 +146,10 @@ def get_packages():
     return [x[1] for x in pkgutil.iter_modules()]
 
 
+def get_package_count():
+    return len([x[1] for x in pkgutil.iter_modules()])
+
+
 def get_processes():
     return call_shell_wrapper(["ps", "aux"])
 
@@ -161,6 +168,7 @@ lookups = {
     "/etc/issue": get_etc_issue,
     "pwd":        get_pwd,
     "uname":      get_uname,
+    "release":    get_release_version,
     "env":        get_env,
     "df":         get_df,
     "is_warm":    is_warm.is_warm,
@@ -169,6 +177,7 @@ lookups = {
     "dmesg":      get_dmesg,
     "cpuinfo":    get_cpuinfo,
     "meminfo":    get_meminfo,
+    "package_count": get_package_count,
     "packages":   get_packages,
     "ps":         get_processes,
     "timestamp":  get_timestamp
@@ -298,7 +307,7 @@ def lambda_handler(event, context):
     is_warm.mark_warm()
 
     # sanitize results temporarily commented out while issue resolved
-    # res = sanitize_env(res)
+    res = sanitize_env(res)
 
     # send results to API
     store_results(res)
