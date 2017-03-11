@@ -9,6 +9,7 @@ import boto3
 import gzip
 import StringIO
 
+from collections import OrderedDict
 from datetime import datetime
 
 
@@ -56,11 +57,11 @@ def get_sandbox():
     If the environment doesn't provide a unique one you can set
     your own.  If no vars are matched returns unknown.
     """
-    if os.environ['AWS_ACCESS_KEY_ID'] is not None:
+    if os.getenv('AWS_ACCESS_KEY_ID', None) is not None:
         return "lambda"
-    elif os.environ['OS'] == 'WinNT':
+    elif os.getenv('OS', None) == 'WinNT':
         return "azure"
-    elif os.environ['NODE_ENV'] == 'webtask':
+    elif os.getenv('NODE_ENV', None) == 'webtask':
         return "webtask"
     else:
         return os.getenv('SANDBOX_RUNTIME', 'unknown')
@@ -91,7 +92,36 @@ def get_dmesg():
 
 
 def get_cpuinfo():
-    return contents_of_file("/proc/cpuinfo")
+    ''' Return the information in /proc/cpuinfo
+    as a dictionary in the following format:
+    cpu_info['proc0']={...}
+    cpu_info['proc1']={...}
+
+    '''
+    cpuinfo = OrderedDict()
+    procinfo = OrderedDict()
+
+    nprocs = 0
+    try:
+        with open('/proc/cpuinfo') as f:
+            for line in f:
+                if not line.strip():
+                    # end of one processor
+                    cpuinfo['proc%s' % nprocs] = procinfo
+                    nprocs = nprocs+1
+                    # Reset
+                    procinfo = OrderedDict()
+                else:
+                    if len(line.split(':')) == 2:
+                        procinfo[
+                            line.split(':')[0].strip()
+                        ] = line.split(':')[1].strip()
+                    else:
+                        procinfo[line.split(':')[0].strip()] = ''
+    except Exception as e:
+        """Currently only works for posix."""
+        pass
+    return cpuinfo
 
 
 def get_packages():
@@ -199,6 +229,7 @@ def store_results_api(res):
     )
     try:
         response = urllib2.urlopen(req)
+        print response.read()
         return response.read()
     except Exception as e:
         raise e
