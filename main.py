@@ -123,6 +123,20 @@ def get_cpuinfo():
         pass
     return cpuinfo
 
+def get_meminfo():
+    ''' Return the information in /proc/meminfo
+    as a dictionary '''
+
+    meminfo = OrderedDict()
+    try:
+        with open('/proc/meminfo') as f:
+            for line in f:
+                meminfo[line.split(':')[0]] = line.split(':')[1].strip()
+    except Exception as e:
+        """Currently only works for posix."""
+        pass
+    return meminfo
+
 
 def get_packages():
     return [x[1] for x in pkgutil.iter_modules()]
@@ -153,6 +167,7 @@ lookups = {
     "warm_for":   is_warm.warm_for,
     "dmesg":      get_dmesg,
     "cpuinfo":    get_cpuinfo,
+    "meminfo":    get_meminfo,
     "packages":   get_packages,
     "ps":         get_processes,
     "timestamp":  get_timestamp
