@@ -8,6 +8,7 @@ import uuid
 import boto3
 import gzip
 import StringIO
+import copy
 
 from collections import OrderedDict
 from datetime import datetime
@@ -80,7 +81,7 @@ def get_uname():
 
 
 def get_env():
-    return os.environ.__dict__.get('data')
+    return copy.deepcopy(os.environ.__dict__.get('data'))
 
 
 def get_df():
