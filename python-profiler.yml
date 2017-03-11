@@ -11,5 +11,5 @@ Resources:
       Description: 'Release version of the python inspector.  CI from the Master Branch.'
       MemorySize: 128
       Timeout: 3
-      Role: 'arn:aws:iam::576309420438:role/lambda_basic_execution'
+      Role: 'arn:aws:iam::576309420438:role/lambda_write_s3'
 
