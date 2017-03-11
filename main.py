@@ -49,6 +49,23 @@ def contents_of_file(fname):
 """Functions for specific data retreival."""
 
 
+def get_sandbox():
+    """Function to try and determine what runtime we are in.
+
+    Looks for environment vars unique to each environment.
+    If the environment doesn't provide a unique one you can set
+    your own.  If no vars are matched returns unknown.
+    """
+    if os.environ['AWS_ACCESS_KEY_ID'] is not None:
+        return "lambda"
+    elif os.environ['OS'] == 'WinNT':
+        return "azure"
+    elif os.environ['NODE_ENV'] == 'webtask':
+        return "webtask"
+    else:
+        return os.getenv('SANDBOX_RUNTIME', 'unknown')
+
+
 def get_etc_issue():
     return contents_of_file("/etc/issue")
 
@@ -95,6 +112,7 @@ def get_timestamp():
 
 """Main map table of items to post or store."""
 lookups = {
+    "sandbox": get_sandbox,
     "/etc/issue": get_etc_issue,
     "pwd":        get_pwd,
     "uname":      get_uname,
@@ -232,8 +250,8 @@ def lambda_handler(event, context):
 
     is_warm.mark_warm()
 
-    # sanitize results
-    #res = sanitize_env(res)
+    # sanitize results temporarily commented out while issue resolved
+    # res = sanitize_env(res)
 
     # send results to API
     store_results(res)
