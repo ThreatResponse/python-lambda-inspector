@@ -5,7 +5,6 @@ import json
 import calendar
 import urllib2
 import uuid
-import boto3
 import gzip
 import StringIO
 import copy
@@ -62,6 +61,8 @@ def get_sandbox():
     if os.getenv('AWS_ACCESS_KEY_ID', None) is not None:
         return "lambda"
     elif os.getenv('OS', None) == 'WinNT':
+        return "azure"
+    elif os.getenv('OS', None) == 'Windows_NT':
         return "azure"
     elif os.getenv('NODE_ENV', None) == 'webtask':
         return "webtask"
@@ -126,6 +127,7 @@ def get_cpuinfo():
         """Currently only works for posix."""
         pass
     return cpuinfo
+
 
 def get_meminfo():
     ''' Return the information in /proc/meminfo
@@ -267,6 +269,10 @@ def store_results_s3(res):
     Assumes that we're in a lambda function (or something else with
     similar permissions).
     """
+
+    # Only import boto3 if we need it.  Otherwise may not work all the time.
+    import boto3
+
     s3 = boto3.client('s3')
     s3_name = "{name}.json.gz".format(name=uuid.uuid4().hex)
     s3_bucket = 'threatresponse.showdown'
