@@ -166,9 +166,13 @@ def get_timestamp():
 
 def get_ipaddress():
     #http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib/25850698#25850698
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(('8.8.8.8', 53))
-    local_ip_address = s.getsockname()[0]
+    local_ip_address='0.0.0.0'
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 53))
+        local_ip_address = s.getsockname()[0]
+    except Exception as e:
+        pass
     return local_ip_address
 
 
