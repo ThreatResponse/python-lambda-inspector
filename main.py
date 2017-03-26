@@ -250,7 +250,7 @@ def store_results_api(res):
     headers = {'Content-Type': 'application/json'}
 
     req = urllib2.Request(
-        'https://showdown-api.ephemeralsystems.com/',
+        'https://67bfbz4uig.execute-api.us-west-2.amazonaws.com/dev/',
         data=data,
         headers=headers
     )
