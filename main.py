@@ -9,6 +9,7 @@ import gzip
 import StringIO
 import copy
 import platform
+import socket
 
 from collections import OrderedDict
 from datetime import datetime
@@ -163,6 +164,13 @@ def truncate(string, start=0, end=0):
 def get_timestamp():
     return calendar.timegm(datetime.utcnow().utctimetuple())
 
+def get_ipaddress():
+    #http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib/25850698#25850698
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8', 53))
+    local_ip_address = s.getsockname()[0]
+    return local_ip_address
+
 
 """Main map table of items to post or store."""
 lookups = {
@@ -182,7 +190,8 @@ lookups = {
     "package_count": get_package_count,
     "packages":   get_packages,
     "ps":         get_processes,
-    "timestamp":  get_timestamp
+    "timestamp":  get_timestamp,
+    "ipaddress":  get_ipaddress
 }
 
 """Remove any sensitive information about the account here."""
