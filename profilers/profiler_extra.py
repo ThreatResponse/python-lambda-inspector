@@ -15,9 +15,7 @@ lookups = {
     "dmesg":      get_dmesg
 }
 
-def run_profiler(env):
+def run_profiler():
     res = make_result_dict(lookups)
-
-    res['sandbox'] = env
 
     return res

@@ -182,12 +182,11 @@ def jsonify_results(d):
 
     return d
 
-def run_profiler(env):
+def run_profiler():
     res = make_result_dict(lookups)
 
     is_warm.mark_warm()
 
     res = sanitize_env(res)
-    res['sandbox'] = env
 
     return jsonify_results(res)

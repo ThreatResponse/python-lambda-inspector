@@ -7,7 +7,9 @@ from profilers.utils import get_sandbox
 def lambda_handler(event, context):
     env = get_sandbox()
     
-    results = core_profiler(env)
+    results = core_profiler()
+
+    results['sandbox'] = env
 
     #store_results(results)
     
