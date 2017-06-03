@@ -8,13 +8,13 @@ from profilers.posix_core import PosixCoreProfiler
 def lambda_handler(event, context):
     env = get_sandbox()
     
-    # results = core_profiler()
-    # results = PosixExtraProfiler.run()
+    ## in the future, can do something like
+    ## if env == 'foo', run this profiler
     results = PosixCoreProfiler.run()
-    
+
     results['sandbox'] = env
 
-    #store_results(results)
+    store_results(results)
     
     return results
 
