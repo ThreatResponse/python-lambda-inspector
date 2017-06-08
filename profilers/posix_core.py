@@ -6,6 +6,7 @@ import calendar
 import copy
 import platform
 import socket
+import re
 
 from collections import OrderedDict
 from datetime import datetime
@@ -19,14 +20,27 @@ class PosixCoreProfiler(Profiler):
     """Functions for specific data retreival."""
 
     def check_docker_containers():
-        ## docker containers can exist at:
-        ## - /var/run/docker.sock
         docker_socket_locations = ["/var/run/docker.sock"]
 
         results = [os.path.ispath(f) for f in docker_socket_locations]
 
         return any(results)
+
+    def check_capabilities():
+        ## we assume (checked on lambda) that we are PID 1
+        ## see http://man7.org/linux/man-pages/man5/proc.5.html
+        ## If we can't check permissions, we assume none.
         
+        statline = call_shell_wrapper(["grep 'CapEff' /proc/1/status"])
+
+        bitmask = re.match(r'CapEff:\t(\d+)\n', res).groups()
+        flags = 0
+
+        if len(bitmask) == 1:
+            flags = int(bitmask[0])
+
+        return flags
+
     def get_pwd():
         return call_shell_wrapper(["pwd"])
 
