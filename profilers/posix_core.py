@@ -18,6 +18,15 @@ class PosixCoreProfiler(Profiler):
 
     """Functions for specific data retreival."""
 
+    def check_docker_containers():
+        ## docker containers can exist at:
+        ## - /var/run/docker.sock
+        docker_socket_locations = ["/var/run/docker.sock"]
+
+        results = [os.path.ispath(f) for f in docker_socket_locations]
+
+        return any(results)
+        
     def get_pwd():
         return call_shell_wrapper(["pwd"])
 
