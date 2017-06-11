@@ -19,6 +19,72 @@ class PosixCoreProfiler(Profiler):
 
     """Functions for specific data retreival."""
 
+    def check_interesting_env_vars():
+        ## Returns a subset of environment variables that are interesting:
+        ## secrets, etc.
+        
+        interesting_vars = [
+            'AWS_SESSION_TOKEN',
+            'AWS_SECURITY_TOKEN',
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+        ]
+
+        env_vars = os.environ.__dict__
+        interesting_subset = dict((k, env_vars[k]) for k in interesting_subset if k in env_vars)
+        
+        return interesting_subset
+    
+    def check_env_editable():
+        os.environ['profiler_test'] = 'flag'
+
+        ## we check with a different method to demonstrate that it's not
+        ## just edited within 'environ'
+        res = call_shell_wrapper(['env | grep \'profiler_test\''])
+
+        if res == 'profiler_test=flag\n':
+            return True
+        else:
+            return False
+    
+    def check_source_editable():
+        ## check if we can edit the file on disk
+        flag_string = 'profiler_test'
+        
+        call_shell_wrapper(['echo "{}" >> {}'.format(flag_string, __file__)])
+        res = call_shell_wrapper(['tail -n 1 {}'.format(__file__)])
+
+        if res == '{}\n'.format(flag_string):
+            return True
+        else:
+            return False
+
+    def check_arbitrary_binary():
+        ## Re: Lambda
+        ## I wasn't able to get executable permissions on the binary in the code dir
+        ## and didn't have permissions to edit with chmod.
+        ## We just attach a precompiled binary, move it to /tmp, and execute.
+        
+        call_shell_wrapper(['mv profiler_bin /tmp'])
+        call_shell_wrapper(['chmod +x /tmp/profiler_bin'])
+        res = call_shell_wrapper(['/tmp/profiler_bin'])
+
+        if res == 'custom profiler binary':
+            return True
+        else:
+            return False
+    
+    def check_other_runtimes():
+        ## for now, just node.  Can expand as wanted, thus we return a dict.
+
+        node_test = call_shell_wrapper(['node -e \'console.log("foo");\''])
+
+        if node_test == 'foo\n':
+            return {'node': True}
+        else:
+            return {'node': False}
+            
+    
     def check_docker_containers():
         docker_socket_locations = ["/var/run/docker.sock"]
 
