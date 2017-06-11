@@ -1,7 +1,14 @@
 import gzip
 import json
-import StringIO
-import urllib2
+try:
+    import StringIO
+except:
+    from io import StringIO
+
+try:
+    import urllib2
+except:
+    import urllib.request as urllib2
 import uuid
 
 from os import getenv
@@ -32,7 +39,7 @@ def store_results_api(res):
             response = urllib2.urlopen(req)
             return response.read()
         except Exception as e:
-            raise e
+            pass
     else:
         return None
 
@@ -56,12 +63,15 @@ def store_results_s3(res):
         data = compress_results(res)
 
         # Store the result in S3 bucket same as the API.
-        response = s3.put_object(
-            Key=s3_name,
-            Body=data,
-            Bucket=s3_bucket
-        )
-        return response
+        try:
+            response = s3.put_object(
+                Key=s3_name,
+                Body=data,
+                Bucket=s3_bucket
+            )
+            return response
+        except:
+            pass
     else:
         return None
 
@@ -79,6 +89,8 @@ def store_results(res):
     Attempts to store results via POST, falls back to writing directly to S3.
     """
     try:
-        store_results_api(res)
+        return store_results_api(res)
     except Exception as e:
-        store_results_s3(res)
+        return store_results_s3(res)
+    finally:
+        return None
