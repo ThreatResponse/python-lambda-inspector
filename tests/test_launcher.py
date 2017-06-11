@@ -9,3 +9,5 @@ class LauncherTest(unittest.TestCase):
     def test_runing_launcher(self):
         res = launcher.wrapper()
         assert res is not None
+
+
