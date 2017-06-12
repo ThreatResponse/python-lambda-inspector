@@ -6,8 +6,12 @@ import calendar
 import copy
 import platform
 import socket
+from socket import socket, AF_INET, SOCK_DGRAM
 import re
+import struct
+import time
 
+from contextlib import closing
 from collections import OrderedDict
 from datetime import datetime
 
@@ -18,6 +22,25 @@ from utils import call_shell_wrapper, contents_of_file, make_result_dict
 class PosixCoreProfiler(Profiler):
 
     """Functions for specific data retreival."""
+
+    def check_time_drift():
+        ## Ignores network latency to the NTP server.
+
+        NTP_PACKET_FORMAT = "!12I"
+        NTP_DELTA = 2208988800L # 1970-01-01 00:00:00
+        NTP_QUERY = '\x1b' + 47 * '\0'
+        host = "pool.ntp.org"
+        port = 123
+
+        with closing(socket(AF_INET, SOCK_DGRAM)) as s:
+            s.sendto(NTP_QUERY, ("pool.ntp.org", 123))
+            msg, address = s.recvfrom(1024)
+            local_time = time.time()
+        unpacked = struct.unpack(NTP_PACKET_FORMAT,
+                       msg[0:struct.calcsize(NTP_PACKET_FORMAT)])
+        ntp_time = unpacked[10] + float(unpacked[11]) / 2**32 - NTP_DELTA
+
+        return abs(ntp_time - local_time)
 
     def check_interesting_env_vars():
         ## Returns a subset of environment variables that are interesting:
