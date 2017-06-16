@@ -1,5 +1,5 @@
-from profiler_base import Profiler
-from utils import call_shell_wrapper, contents_of_file, make_result_dict
+from profilers.profiler_base import Profiler
+from profilers.utils import call_shell_wrapper, contents_of_file, make_result_dict
 
 
 class PosixExtraProfiler(Profiler):

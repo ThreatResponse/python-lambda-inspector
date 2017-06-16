@@ -1,7 +1,5 @@
 import os
-import is_warm
 import pkgutil
-import json
 import calendar
 import copy
 import platform
@@ -14,9 +12,10 @@ import time
 from contextlib import closing
 from collections import OrderedDict
 from datetime import datetime
+from profilers import is_warm
 
-from profiler_base import Profiler
-from utils import call_shell_wrapper, contents_of_file, make_result_dict
+from profilers.profiler_base import Profiler
+from profilers.utils import call_shell_wrapper, contents_of_file, make_result_dict
 
 
 class PosixCoreProfiler(Profiler):

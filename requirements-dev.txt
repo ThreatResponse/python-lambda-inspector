@@ -1,0 +1,7 @@
+boto3
+nose
+nose-watch
+mock
+patch
+moto
+

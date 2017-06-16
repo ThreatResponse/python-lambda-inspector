@@ -1,30 +1,47 @@
-import json
-import urllib2
-import uuid
 import gzip
-import StringIO
+import json
+try:
+    import StringIO
+except:
+    from io import StringIO
+
+try:
+    import urllib2
+except:
+    import urllib.request as urllib2
+import uuid
+
+from os import getenv
 
 def store_results_api(res):
     """Store Results via the API Component.
 
+    Store results either in urllib2 or directly in s3 if lambda.
     HTTP request will be a POST instead of a GET when the data
     parameter is provided.
     """
     data = json.dumps(res)
 
-    headers = {'Content-Type': 'application/json'}
-
-    req = urllib2.Request(
-        'https://67bfbz4uig.execute-api.us-west-2.amazonaws.com/dev/',
-        data=data,
-        headers=headers
-    )
-    try:
-        response = urllib2.urlopen(req)
-        print response.read()
-        return response.read()
-    except Exception as e:
-        raise e
+    # Look for an environment variable containing the API key.
+    # If it exists post the result to the API endpoint.
+    api_key = getenv('observatory_api_key', None)
+    headers = {
+        "Authorization": "Basic %s" % api_key,
+        'Content-Type': 'application/json'
+        }
+    if api_key is not None:
+        req = urllib2.Request(
+            'https://serverless-observatory.threatresponse.cloud/api/profile',
+            data=data,
+            headers=headers
+        )
+        try:
+            response = urllib2.urlopen(req)
+            return response.read()
+        except Exception as e:
+            pass
+    else:
+        return None
 
 def store_results_s3(res):
     """
@@ -33,24 +50,30 @@ def store_results_s3(res):
     Assumes that we're in a lambda function (or something else with
     similar permissions).
     """
+    s3_bucket = getenv('observatory-results-bucket', None)
 
-    # Only import boto3 if we need it.  Otherwise may not work all the time.
-    import boto3
+    if s3_bucket is not None:
+        # Only import boto3 if we need it.  Otherwise may not work all the time.
+        import boto3
 
-    s3 = boto3.client('s3')
-    s3_name = "{name}.json.gz".format(name=uuid.uuid4().hex)
-    s3_bucket = 'threatresponse.showdown'
+        s3 = boto3.client('s3')
+        s3_name = "{name}.json.gz".format(name=uuid.uuid4().hex)
 
-    # Compress the payload for fluentd friendlieness.
-    data = compress_results(res)
+        # Compress the payload for fluentd friendlieness.
+        data = compress_results(res)
 
-    # Store the result in S3 bucket same as the API.
-    response = s3.put_object(
-        Key=s3_name,
-        Body=data,
-        Bucket=s3_bucket
-    )
-    return response
+        # Store the result in S3 bucket same as the API.
+        try:
+            response = s3.put_object(
+                Key=s3_name,
+                Body=data,
+                Bucket=s3_bucket
+            )
+            return response
+        except:
+            pass
+    else:
+        return None
 
 
 def compress_results(res):
@@ -66,6 +89,8 @@ def store_results(res):
     Attempts to store results via POST, falls back to writing directly to S3.
     """
     try:
-        store_results_api(res)
+        return store_results_api(res)
     except Exception as e:
-        store_results_s3(res)
+        return store_results_s3(res)
+    finally:
+        return None
