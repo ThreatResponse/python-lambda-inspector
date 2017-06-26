@@ -289,7 +289,13 @@ class PosixCoreProfiler(Profiler):
         "ps":         get_processes,
         "timestamp":  get_timestamp,
         "ipaddress":  get_ipaddress,
-        "uptime": get_uptime
+        "uptime":     get_uptime,
+        "time_drift": check_time_drift,
+        "env_subset": check_interesting_env_vars,
+        "source_editable": check_source_editable,
+        "other_runtimes": check_other_runtimes,
+        "docker_sockets": check_docker_containers,
+        "proc_capabilities": check_capabilities
     }
 
     @staticmethod
