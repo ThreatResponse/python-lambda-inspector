@@ -2,6 +2,7 @@ import os
 import pkgutil
 import calendar
 import copy
+import pkg_resources
 import platform
 import socket
 
@@ -124,6 +125,17 @@ class PosixCoreProfiler(Profiler):
     def get_packages():
         return [x[1] for x in pkgutil.iter_modules()]
 
+    def get_package_versions():
+        results = {}
+        for x in pkgutil.iter_modules():
+            try:
+                results[x[1]] = {
+                    'version': str(pkg_resources.get_distribution(x[1]).version)
+                }
+            except:
+                pass
+        return results
+
     def get_package_count():
         return len([x[1] for x in pkgutil.iter_modules()])
 
@@ -134,7 +146,7 @@ class PosixCoreProfiler(Profiler):
         return calendar.timegm(datetime.utcnow().utctimetuple())
 
     def get_ipaddress():
-        #http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib/25850698#25850698
+        # http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib/25850698#25850698
         local_ip_address='0.0.0.0'
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -161,6 +173,7 @@ class PosixCoreProfiler(Profiler):
         "meminfo":    get_meminfo,
         "package_count": get_package_count,
         "packages":   get_packages,
+        "package_versions": get_package_versions,
         "ps":         get_processes,
         "timestamp":  get_timestamp,
         "ipaddress":  get_ipaddress,
