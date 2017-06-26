@@ -2,6 +2,7 @@ import os
 import pkgutil
 import calendar
 import copy
+import pkg_resources
 import platform
 import socket
 from socket import socket, AF_INET, SOCK_DGRAM
@@ -11,7 +12,7 @@ import time
 
 from contextlib import closing
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from profilers import is_warm
 
 from profilers.profiler_base import Profiler
@@ -135,6 +136,12 @@ class PosixCoreProfiler(Profiler):
     def get_release_version():
         return platform.release()
 
+    def get_uptime():
+        with open('/proc/uptime', 'r') as f:
+            uptime_seconds = float(f.readline().split()[0])
+            uptime_string = str(timedelta(seconds=uptime_seconds))
+            return uptime_string
+
     def get_env():
         """Remove any sensitive information about the account here."""
 
@@ -230,6 +237,17 @@ class PosixCoreProfiler(Profiler):
     def get_packages():
         return [x[1] for x in pkgutil.iter_modules()]
 
+    def get_package_versions():
+        results = {}
+        for x in pkgutil.iter_modules():
+            try:
+                results[x[1]] = {
+                    'version': str(pkg_resources.get_distribution(x[1]).version)
+                }
+            except:
+                pass
+        return results
+
     def get_package_count():
         return len([x[1] for x in pkgutil.iter_modules()])
 
@@ -240,7 +258,7 @@ class PosixCoreProfiler(Profiler):
         return calendar.timegm(datetime.utcnow().utctimetuple())
 
     def get_ipaddress():
-        #http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib/25850698#25850698
+        # http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib/25850698#25850698
         local_ip_address='0.0.0.0'
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -267,9 +285,11 @@ class PosixCoreProfiler(Profiler):
         "meminfo":    get_meminfo,
         "package_count": get_package_count,
         "packages":   get_packages,
+        "package_versions": get_package_versions,
         "ps":         get_processes,
         "timestamp":  get_timestamp,
-        "ipaddress":  get_ipaddress
+        "ipaddress":  get_ipaddress,
+        "uptime": get_uptime
     }
 
     @staticmethod
