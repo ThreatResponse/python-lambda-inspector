@@ -6,7 +6,7 @@ import platform
 import socket
 
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from profilers import is_warm
 
 from profilers.profiler_base import Profiler
@@ -22,6 +22,12 @@ class PosixCoreProfiler(Profiler):
 
     def get_release_version():
         return platform.release()
+
+    def get_uptime():
+        with open('/proc/uptime', 'r') as f:
+            uptime_seconds = float(f.readline().split()[0])
+            uptime_string = str(timedelta(seconds=uptime_seconds))
+            return uptime_string
 
     def get_env():
         """Remove any sensitive information about the account here."""
@@ -157,7 +163,8 @@ class PosixCoreProfiler(Profiler):
         "packages":   get_packages,
         "ps":         get_processes,
         "timestamp":  get_timestamp,
-        "ipaddress":  get_ipaddress
+        "ipaddress":  get_ipaddress,
+        "uptime": get_uptime
     }
 
     @staticmethod
