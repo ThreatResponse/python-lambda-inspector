@@ -1,4 +1,5 @@
 import os
+import base64
 
 def call_shell_wrapper(args):
     """
@@ -9,6 +10,16 @@ def call_shell_wrapper(args):
     """
     return os.popen(" ".join(args)).read()
 
+def call_powershell_wrapper(args):
+    """
+    Execute powershell commands by passing a base64 encoded command to powershell.exe
+    This method makes no attempt to verify powershell is availible in the runtime.
+
+    Return Stdout from powershell.exe
+    """
+    powershell_command = ['powershell.exe', '-EncodedCommand']
+    payload = base64.b64encode(" ".join(args).encode('UTF-16LE'))
+    return os.popen(" ".join(powershell_command.append(payload))).read()
 
 def contents_of_file(fname):
     """Return contents of file in a single string.
