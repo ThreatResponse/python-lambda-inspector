@@ -25,6 +25,12 @@ class WindowsCoreProfiler(Profiler):
         return platform.release()
 
 
+    def get_df():
+        return call_powershellshell_wrapper(
+            ["Get-PSDrive", "-psprovider", "FileSystem", "|", "Select-Object",
+             "-Property", "*"]
+        )
+
     def get_packages():
         return [x[1] for x in pkgutil.iter_modules()]
 
@@ -64,6 +70,7 @@ class WindowsCoreProfiler(Profiler):
     lookups = {
         "pwd":        get_pwd,
         "release":    get_release_version,
+        "df":         get_df,
         "is_warm":    is_warm.is_warm,
         "warm_since": is_warm.warm_since,
         "warm_for":   is_warm.warm_for,
