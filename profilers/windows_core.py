@@ -18,6 +18,9 @@ class WindowsCoreProfiler(Profiler):
 
     """Functions for specific data retreival."""
 
+    def get_pwd():
+        return call_powershellshell_wrapper(['Convert-Path', '.'])
+
     def get_release_version():
         return platform.release()
 
