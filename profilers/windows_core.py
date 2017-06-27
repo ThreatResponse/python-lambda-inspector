@@ -42,6 +42,9 @@ class WindowsCoreProfiler(Profiler):
     def get_package_count():
         return len([x[1] for x in pkgutil.iter_modules()])
 
+    def get_processes():
+        return call_powershell_wrapper(["Get-Process", "|", "ConvertTo-Json"])
+
     def get_timestamp():
         return calendar.timegm(datetime.utcnow().utctimetuple())
 
@@ -67,6 +70,7 @@ class WindowsCoreProfiler(Profiler):
         "package_count": get_package_count,
         "packages":   get_packages,
         "package_versions": get_package_versions,
+        "ps":         get_processes,
         "timestamp":  get_timestamp,
         "ipaddress":  get_ipaddress,
     }
