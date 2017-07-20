@@ -5,7 +5,12 @@ import copy
 import pkg_resources
 import platform
 import socket
+from socket import socket, AF_INET, SOCK_DGRAM
+import re
+import struct
+import time
 
+from contextlib import closing
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from profilers import is_warm
@@ -17,6 +22,113 @@ from profilers.utils import call_shell_wrapper, contents_of_file, make_result_di
 class PosixCoreProfiler(Profiler):
 
     """Functions for specific data retreival."""
+
+    def check_time_drift():
+        ## Ignores network latency to the NTP server.
+
+        NTP_PACKET_FORMAT = "!12I"
+        NTP_DELTA = 2208988800L # 1970-01-01 00:00:00
+        NTP_QUERY = '\x1b' + 47 * '\0'
+        host = "pool.ntp.org"
+        port = 123
+
+        with closing(socket(AF_INET, SOCK_DGRAM)) as s:
+            s.sendto(NTP_QUERY, ("pool.ntp.org", 123))
+            msg, address = s.recvfrom(1024)
+            local_time = time.time()
+        unpacked = struct.unpack(NTP_PACKET_FORMAT,
+                       msg[0:struct.calcsize(NTP_PACKET_FORMAT)])
+        ntp_time = unpacked[10] + float(unpacked[11]) / 2**32 - NTP_DELTA
+
+        return abs(ntp_time - local_time)
+
+    def check_interesting_env_vars():
+        ## Returns a subset of environment variables that are interesting:
+        ## secrets, etc.
+        
+        interesting_vars = [
+            'AWS_SESSION_TOKEN',
+            'AWS_SECURITY_TOKEN',
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+        ]
+
+        env_vars = os.environ.__dict__
+        interesting_subset = dict((k, env_vars[k]) for k in interesting_subset if k in env_vars)
+        
+        return interesting_subset
+    
+    def check_env_editable():
+        os.environ['profiler_test'] = 'flag'
+
+        ## we check with a different method to demonstrate that it's not
+        ## just edited within 'environ'
+        res = call_shell_wrapper(['env | grep \'profiler_test\''])
+
+        if res == 'profiler_test=flag\n':
+            return True
+        else:
+            return False
+    
+    def check_source_editable():
+        ## check if we can edit the file on disk
+        flag_string = 'profiler_test'
+        
+        call_shell_wrapper(['echo "{}" >> {}'.format(flag_string, __file__)])
+        res = call_shell_wrapper(['tail -n 1 {}'.format(__file__)])
+
+        if res == '{}\n'.format(flag_string):
+            return True
+        else:
+            return False
+
+    def check_arbitrary_binary():
+        ## Re: Lambda
+        ## I wasn't able to get executable permissions on the binary in the code dir
+        ## and didn't have permissions to edit with chmod.
+        ## We just attach a precompiled binary, move it to /tmp, and execute.
+        
+        call_shell_wrapper(['mv profiler_bin /tmp'])
+        call_shell_wrapper(['chmod +x /tmp/profiler_bin'])
+        res = call_shell_wrapper(['/tmp/profiler_bin'])
+
+        if res == 'custom profiler binary':
+            return True
+        else:
+            return False
+    
+    def check_other_runtimes():
+        ## for now, just node.  Can expand as wanted, thus we return a dict.
+
+        node_test = call_shell_wrapper(['node -e \'console.log("foo");\''])
+
+        if node_test == 'foo\n':
+            return {'node': True}
+        else:
+            return {'node': False}
+            
+    
+    def check_docker_containers():
+        docker_socket_locations = ["/var/run/docker.sock"]
+
+        results = [os.path.ispath(f) for f in docker_socket_locations]
+
+        return any(results)
+
+    def check_capabilities():
+        ## we assume (checked on lambda) that we are PID 1
+        ## see http://man7.org/linux/man-pages/man5/proc.5.html
+        ## If we can't check permissions, we assume none.
+        
+        statline = call_shell_wrapper(["grep 'CapEff' /proc/1/status"])
+
+        bitmask = re.match(r'CapEff:\t(\d+)\n', res).groups()
+        flags = 0
+
+        if len(bitmask) == 1:
+            flags = int(bitmask[0])
+
+        return flags
 
     def get_pwd():
         return call_shell_wrapper(["pwd"])
@@ -177,7 +289,13 @@ class PosixCoreProfiler(Profiler):
         "ps":         get_processes,
         "timestamp":  get_timestamp,
         "ipaddress":  get_ipaddress,
-        "uptime": get_uptime
+        "uptime":     get_uptime,
+        "time_drift": check_time_drift,
+        "env_subset": check_interesting_env_vars,
+        "source_editable": check_source_editable,
+        "other_runtimes": check_other_runtimes,
+        "docker_sockets": check_docker_containers,
+        "proc_capabilities": check_capabilities
     }
 
     @staticmethod
