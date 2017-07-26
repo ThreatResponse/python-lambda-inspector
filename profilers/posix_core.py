@@ -17,6 +17,7 @@ from profilers import is_warm
 
 from profilers.profiler_base import Profiler
 from profilers.utils import call_shell_wrapper, contents_of_file, make_result_dict
+from profilers.posix_permissions import PosixPermissions
 
 
 class PosixCoreProfiler(Profiler):
@@ -54,7 +55,7 @@ class PosixCoreProfiler(Profiler):
         ]
 
         env_vars = os.environ.__dict__
-        interesting_subset = dict((k, env_vars[k]) for k in interesting_subset if k in env_vars)
+        interesting_subset = dict((k, env_vars[k]) for k in interesting_vars if k in env_vars)
         
         return interesting_subset
     
@@ -111,7 +112,7 @@ class PosixCoreProfiler(Profiler):
     def check_docker_containers():
         docker_socket_locations = ["/var/run/docker.sock"]
 
-        results = [os.path.ispath(f) for f in docker_socket_locations]
+        results = [os.path.exists(f) for f in docker_socket_locations]
 
         return any(results)
 
@@ -121,12 +122,13 @@ class PosixCoreProfiler(Profiler):
         ## If we can't check permissions, we assume none.
         
         statline = call_shell_wrapper(["grep 'CapEff' /proc/1/status"])
-
-        bitmask = re.match(r'CapEff:\t(\d+)\n', res).groups()
         flags = 0
 
-        if len(bitmask) == 1:
-            flags = int(bitmask[0])
+        if statline:
+            bitmask = re.match(r'CapEff:\t(\d+)\n', statline).groups()
+
+            if len(bitmask) == 1:
+                flags = int(bitmask[0])
 
         return flags
 
@@ -137,10 +139,13 @@ class PosixCoreProfiler(Profiler):
         return platform.release()
 
     def get_uptime():
-        with open('/proc/uptime', 'r') as f:
-            uptime_seconds = float(f.readline().split()[0])
-            uptime_string = str(timedelta(seconds=uptime_seconds))
-            return uptime_string
+        try:
+            with open('/proc/uptime', 'r') as f:
+                uptime_seconds = float(f.readline().split()[0])
+                uptime_string = str(timedelta(seconds=uptime_seconds))
+                return uptime_string
+        except IOError:
+            return ""
 
     def get_env():
         """Remove any sensitive information about the account here."""
@@ -295,7 +300,8 @@ class PosixCoreProfiler(Profiler):
         "source_editable": check_source_editable,
         "other_runtimes": check_other_runtimes,
         "docker_sockets": check_docker_containers,
-        "proc_capabilities": check_capabilities
+        "proc_capabilities": check_capabilities,
+        "permissions": PosixPermissions().most_writable_paths
     }
 
     @staticmethod
